@@ -17,11 +17,11 @@ def load_live_summary(path):
             if prefix in fields and event in ('string', 'number', 'null'):
                 result[prefix] = value
     if (not isinstance(result.get('source'), str) or not result['source']
-            or result.get('sourceType') != 'windows.wasapi.loopback'
+            or result.get('sourceType') not in ('windows.wasapi.loopback','windows.wasapi.microphone')
             or not isinstance(result.get('durationSeconds'), (int,float))
             or not math.isfinite(result.get('durationSeconds', 0)) or result.get('durationSeconds', 0) <= 0
             or result.get('sampleRate', 0) <= 0):
-        raise ValueError('No positive-duration WASAPI recording available for video.')
+        raise ValueError('No positive-duration capture recording available for video.')
     stat = Path(path).stat()
     result['_fileSize'], result['_modifiedNs'] = stat.st_size, stat.st_mtime_ns
     return result
@@ -41,7 +41,8 @@ class LiveCaptureOverlay:
         self.current = None
         self.error_sum = self.max_error = 0.0
         self.event_count = 0
-        self.template = Overlay(dict(source='Windows system audio', durationSeconds=data['durationSeconds'],
+        title = 'Microphone audio' if data['sourceType']=='windows.wasapi.microphone' else 'Windows system audio'
+        self.template = Overlay(dict(source=title, durationSeconds=data['durationSeconds'],
                                      estimatedBpm=0, beatCount=0, beats=[]), size, fps)
         # Detection timestamps are monotonic even if corrected musical positions are slightly reordered.
         # Look far enough ahead for the scrolling future area plus the configured trailing FFT.

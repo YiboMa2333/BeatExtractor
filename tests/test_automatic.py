@@ -30,7 +30,7 @@ class LauncherTests(unittest.TestCase):
                 samples[start:start+220] = np.hanning(220)*(.4 if start < sr*4 else .8)
             sf.write(wav, samples, sr)
             run = subprocess.run(['cmd.exe', '/d', '/c', str(project/'run_beat_tracker.bat'), '--no-pause'],
-                                 input=f'3\n"{wav}"\nN\n4\n', capture_output=True, text=True,
+                                 input=f'3\n"{wav}"\nN\n5\n', capture_output=True, text=True,
                                  encoding='utf-8', errors='replace', cwd=directory, timeout=180)
             self.assertEqual(run.returncode, 0, run.stdout+run.stderr)
             self.assertIn('ECG EXPORT SUCCESSFUL', run.stdout)

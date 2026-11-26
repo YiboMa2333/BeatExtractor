@@ -90,7 +90,7 @@ def offline_workflow(raw, folder):
 def main(argv=None):
     parser = argparse.ArgumentParser(description='Offline features, live analysis, or ECG video export.')
     parser.add_argument('wav', nargs='?')
-    parser.add_argument('--action', choices=('offline', 'live', 'video'))
+    parser.add_argument('--action', choices=('offline', 'live', 'video', 'microphone'))
     parser.add_argument('--mode', choices=('preview', 'quality'), default='preview')
     parser.add_argument('--output-dir', type=Path)
     parser.add_argument('--block-size', type=int, default=512)
@@ -100,6 +100,7 @@ def main(argv=None):
     parser.add_argument('--device', type=int)
     parser.add_argument('--live-source', choices=('loopback', 'file'), default='loopback')
     parser.add_argument('--list-loopback-devices', action='store_true')
+    parser.add_argument('--list-microphones',action='store_true')
     args = parser.parse_args(argv or [])
 
     def dispatch(action):
@@ -116,7 +117,13 @@ def main(argv=None):
         try:
             from live_engine import LiveSettings
             settings = LiveSettings(args.block_size, args.fft_size, args.gui_fps, args.queue_blocks, args.device)
-            if args.live_source == 'loopback':
+            if action == 'microphone':
+                if args.wav:
+                    raise ValueError('Microphone mode does not take an audio file.')
+                from live_gui import run_microphone
+                print('Microphone mode. Click Start recording in the window to begin.',flush=True)
+                saved,error=run_microphone(folder,settings,video_mode=args.mode)
+            elif args.live_source == 'loopback':
                 if args.wav:
                     raise ValueError('System-audio mode does not take a file. Use --live-source file for local playback.')
                 from live_gui import run_loopback
@@ -141,6 +148,16 @@ def main(argv=None):
             return 1
 
     try:
+        if args.list_microphones:
+            try:
+                from microphone_engine import list_microphones
+                for device in list_microphones():
+                    print(f"{device['index']}: {device['name']} ({device['sampleRate']:.0f} Hz)"+
+                          (' [default]' if device['default'] else ''),flush=True)
+                return 0
+            except Exception as error:
+                print(f'Cannot list microphones: {error}',flush=True)
+                return 1
         if args.list_loopback_devices:
             try:
                 from loopback_engine import list_loopback_devices
@@ -157,18 +174,21 @@ def main(argv=None):
             print('\n'+'='*42+'\n       SUPER HAPPY SPACE 2.0\n         MUSIC ANALYSER\n'+'='*42+
                   '\n\nSelect a mode:\n\n[1] Offline Analysis\n    Extract features and export JSON.\n'
                   '\n[2] Live Analysis\n    Capture Windows system audio in real time (no file needed).\n'
-                  '\n[3] Video Export\n    Generate an ECG-style MP4 with song audio.\n\n[4] Exit', flush=True)
+                  '\n[3] Video Export\n    Generate an ECG-style MP4 with song audio.\n'
+                  '\n[4] Microphone Analysis\n    Record and analyse the computer microphone.\n\n[5] Exit', flush=True)
             answer = input('\nEnter your choice:\n> ').strip()
-            if answer == '4':
+            if answer == '5':
                 return 0
-            if answer not in ('1', '2', '3'):
-                print('Please enter 1, 2, 3 or 4.', flush=True)
+            if answer not in ('1', '2', '3', '4'):
+                print('Please enter 1, 2, 3, 4 or 5.', flush=True)
                 continue
-            dispatch({'1': 'offline', '2': 'live', '3': 'video'}[answer])
+            dispatch({'1': 'offline', '2': 'live', '3': 'video','4':'microphone'}[answer])
     except (EOFError, KeyboardInterrupt):
         print('\nMusic analyser closed.', flush=True)
         return 130
 
 
 if __name__ == '__main__':
+    if hasattr(sys.stdout,'reconfigure'):
+        sys.stdout.reconfigure(errors='backslashreplace')
     raise SystemExit(main(sys.argv[1:]))

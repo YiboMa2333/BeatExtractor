@@ -20,6 +20,11 @@ independent. Wait for the rendering/validation message before closing the CMD
 process; the live window remains responsive and shows rendering progress. A
 window-close request stops capture, then waits for JSON/video finalisation.
 
+The separate **Microphone Analysis** mode (menu **4**) uses the same stopped-by-default
+Start/Stop UI and export sequence, saving `microphone_live_features.json` first and
+then `microphone_live_ecg.mp4` here. Menu **5** exits. System-audio mode continues
+to use speaker loopback; it does not automatically switch to a microphone.
+
 The MP4 contains H.264 ECG visuals and AAC audio. Preview defaults to 720p/24 FPS;
 `run_beat_tracker.bat --quality`, followed by option 2, uses 1080p/30 FPS. Yellow
 peaks are recorded onsets; cyan peaks are recorded estimated beats after tempo

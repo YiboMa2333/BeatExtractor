@@ -14,7 +14,7 @@ from live_dsp import StreamingFeatures
 
 def require_loopback_dependencies():
     if os.name != 'nt':
-        raise RuntimeError('System-audio loopback mode requires Windows WASAPI.')
+        raise RuntimeError('WASAPI capture requires Windows.')
     try:
         import pyaudiowpatch
         import ijson
@@ -55,7 +55,20 @@ def list_loopback_devices():
 
 
 class LoopbackEngine(LiveEngine):
+    is_capture = True
     is_loopback = True
+    is_microphone = False
+    source_name = 'system_audio'
+    source_type = 'windows.wasapi.loopback'
+
+    def select_device(self, client, api, index):
+        return select_loopback(client, api, index)
+
+    def transform_capture_block(self,block):
+        return block
+
+    def capture_metadata(self):
+        return {}
 
     def __init__(self, folder, settings=None, audio_api=None, export_mp4=True, video_mode='preview'):
         api = audio_api or require_loopback_dependencies()
@@ -64,11 +77,11 @@ class LoopbackEngine(LiveEngine):
         try:
             selected = settings or LiveSettings()
             selected.validate()
-            self.device_info = select_loopback(self.client, api, selected.device)
+            self.device_info = self.select_device(self.client, api, selected.device)
             sr = int(self.device_info['defaultSampleRate'])
             channels = int(self.device_info['maxInputChannels'])
             info = SimpleNamespace(samplerate=sr, channels=channels, frames=0, duration=0)
-            super().__init__('system_audio', folder, selected, api, _source_info=info)
+            super().__init__(self.source_name, folder, selected, api, _source_info=info)
             self.capture_label = self.device_info['name']
             self.capture_latency = None
             self.stream_released = False
@@ -100,7 +113,7 @@ class LoopbackEngine(LiveEngine):
             self.capture_latency = float(self.stream.get_input_latency())
             self.stream.start_stream()
         except BaseException as error:
-            self.error = f'WASAPI loopback could not start: {error}'
+            self.error = f'WASAPI capture could not start: {error}'
             self.request_stop()
             self._release_capture()
             self.analysis_stop.set()
@@ -128,6 +141,7 @@ class LoopbackEngine(LiveEngine):
             return None, self.audio_api.paAbort
         # A read-only view retains the callback bytes; no decoding, FFT or disk I/O here.
         block = np.frombuffer(in_data, dtype=np.float32).reshape(frames, self.info.channels)
+        block = self.transform_capture_block(block)
         if self.audio_capture:
             # Independent of analysis queue/pauses; no captured audio is written in this callback.
             self.audio_capture.offer(start, block)
@@ -167,7 +181,7 @@ class LoopbackEngine(LiveEngine):
             except Exception:
                 active = False
             if not active:
-                self.error = self.error or 'Loopback device stopped. Check Windows output device, then start a new session.'
+                self.error = self.error or 'Capture device stopped. Check the selected Windows audio device, then start a new session.'
                 self.request_stop()
 
     def _release_capture(self):
@@ -211,7 +225,7 @@ class LoopbackEngine(LiveEngine):
                 except Exception as error:
                     self.error = self.error or str(error)
             self.stats['meanProcessingMs'] = self.stats['totalProcessingMs']/max(1, self.stats['analysedBlocks'])
-            metadata = dict(source='system_audio', mode='live', sourceType='windows.wasapi.loopback',
+            metadata = dict(source=self.source_name, mode='live', sourceType=self.source_type,
                 sampleRate=self.info.samplerate, durationSeconds=self.frozen_position/self.info.samplerate,
                 captureDurationSeconds=self.frozen_position/self.info.samplerate,
                 completed=not bool(self.error), completionMeaning='capture session finalised; not song EOF',
@@ -223,12 +237,14 @@ class LoopbackEngine(LiveEngine):
                     channels=self.info.channels, reportedInputLatencySeconds=self.capture_latency,
                     clock='received WASAPI PCM sample count; session-relative, not original song time',
                     pause='capture clock continues; analysis/recording pauses, external audio continues',
-                    microphone=False, outputPlayback=False,
+                    microphone=self.is_microphone, outputPlayback=False,
                     temporaryAudioPath=str(captured_audio) if captured_audio else None,
                     audioCleanup='removed after verified MP4; retained on video failure',
-                    overflow='unknown lost hardware samples are reported, not fabricated'),
+                    overflow='unknown lost hardware samples are reported, not fabricated',
+                    **self.capture_metadata()),
                 eventTypes=['onset', 'estimatedBeat', 'analysisGap', 'analysisDroppedBuffer',
-                            'captureOverflow', 'captureStatus', 'analysisPaused', 'analysisResumed'],
+                            'captureOverflow', 'captureStatus', 'analysisPaused', 'analysisResumed']+
+                           (['microphoneGainChanged'] if self.is_microphone else []),
                 diagnostics=dict(self.stats, audioRecording=dict(self.audio_capture.stats) if self.audio_capture else {}), error=self.error)
             self.result_path = self.recorder.finish(metadata)
             print(f'\nJSON saved and validated:\n{self.result_path}', flush=True)
@@ -238,7 +254,7 @@ class LoopbackEngine(LiveEngine):
                         raise ValueError('No captured audio available for MP4 export.')
                     from video_export import export_video
                     self.export_status = f'JSON saved: {self.result_path}. Rendering ECG MP4...'
-                    print('Rendering ECG MP4 from recorded live events and Windows audio...', flush=True)
+                    print('Rendering ECG MP4 from recorded live events and captured audio...', flush=True)
                     def progress(percent, message):
                         self.export_status = f'JSON saved. [{percent}%] {message}'
                         print(f'[{percent:3d}% ] {message}', flush=True)

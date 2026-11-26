@@ -279,10 +279,10 @@ class RecorderAndMenuTests(unittest.TestCase):
 
     def test_menu_invalid_choice_and_exit(self):
         output = io.StringIO()
-        with patch('builtins.input', side_effect=['invalid', '4']), contextlib.redirect_stdout(output):
+        with patch('builtins.input', side_effect=['invalid', '5']), contextlib.redirect_stdout(output):
             self.assertEqual(cmd_app.main(), 0)
         self.assertIn('[2] Live Analysis', output.getvalue())
-        self.assertIn('Please enter 1, 2, 3 or 4.', output.getvalue())
+        self.assertIn('Please enter 1, 2, 3, 4 or 5.', output.getvalue())
 
 
 if __name__ == '__main__':

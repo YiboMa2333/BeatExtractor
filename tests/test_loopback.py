@@ -140,7 +140,7 @@ class LoopbackTests(unittest.TestCase):
 
     def test_live_menu_does_not_request_any_file(self):
         output = io.StringIO()
-        with patch('builtins.input', side_effect=['2', '4']) as user_input, \
+        with patch('builtins.input', side_effect=['2', '5']) as user_input, \
                 patch('live_gui.run_loopback', return_value=(self.folder/'system_audio_live_features.json', None)) as capture, \
                 contextlib.redirect_stdout(output):
             self.assertEqual(cmd_app.main(), 0)

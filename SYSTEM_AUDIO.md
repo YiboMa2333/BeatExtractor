@@ -1,5 +1,8 @@
 # Live Windows system audio (default Live Analysis mode)
 
+For computer microphone input, choose the separate **Microphone Analysis** option
+**4**; see README.md. This system-audio mode remains option **2**. Exit is **5**.
+
 Choose **2** after launching `run_beat_tracker.bat`. No local file is requested.
 The window opens **stopped**. Open your music source, then click **Start recording**.
 The application captures the default Windows WASAPI speaker/headphone output

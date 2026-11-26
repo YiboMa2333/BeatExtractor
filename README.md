@@ -2,9 +2,50 @@
 
 Choose a mode in CMD: **[1] Offline Analysis** (WAV to features JSON),
 **[2] Live Analysis** (capture Windows audio, save JSON first, then export an ECG MP4),
-**[3] Video Export** (the existing feature extraction plus ECG MP4), or **[4] Exit**.
+**[3] Video Export** (the existing feature extraction plus ECG MP4),
+**[4] Microphone Analysis** (computer microphone), or **[5] Exit**.
 Video defaults to a fast **1280 x 720, 24 FPS preview**. No GPU, decorative engine,
-microphone, cloud service, recording import or manual alignment is needed.
+cloud service, recording import or manual alignment is needed. Only the explicit
+Microphone Analysis mode opens a microphone; system-audio capture remains separate.
+
+## Microphone Analysis
+
+Choose **4** in CMD. The same live ECG/features window opens **stopped**. Click
+**Start recording** to capture the Windows default microphone/recording input,
+then **Stop recording** when finished. No captured microphone audio is played
+back through the speakers. It saves `download/microphone_live_features.json`
+first, then renders `download/microphone_live_ecg.mp4` with the captured microphone
+audio. Existing files get numbered names. The button returns to Start for a fresh
+session once export finishes.
+
+The existing live dependencies also support this mode; no additional package is
+needed. Windows must allow microphone access for desktop applications. If the
+device is unavailable or permission is denied, the app reports the error.
+Select the computer microphone in Windows input settings, or choose a specific
+WASAPI recording-input index:
+
+```bat
+.venv\Scripts\python.exe src\cmd_app.py --list-microphones
+.venv\Scripts\python.exe src\cmd_app.py --action microphone --device INDEX
+```
+
+System audio (option 2) rejects microphone inputs. Microphone mode rejects
+speaker-loopback endpoints. Speak, clap, or play music near the microphone to
+provide input; ambient noise can affect onset/tempo estimates. It uses the same
+DSP, sample timing, recorder and JSON-first MP4 workflow as system-audio mode.
+It does not guarantee musical beat detection from speech or noise.
+
+The microphone window includes a **recorded input level meter** and **0–36 dB
+input gain** slider. Gain defaults to 0 dB and applies equally to the recorded
+audio and feature analysis; changes are logged in JSON. If music played near
+the computer sounds missing, first check the displayed microphone name, Windows
+input volume/mute and microphone permissions using **Windows input settings**.
+Speak or clap near the mic and watch the meter. For a weak but nonzero signal,
+try +20 dB and adjust while watching for the clipping warning. Digital gain cannot
+recover a muted/disconnected microphone and will also amplify background noise.
+Windows/vendor noise suppression or audio enhancements may suppress music; check
+those settings if speech records but nearby music does not. Existing videos are
+not modified by changing the gain; make a new recording after adjusting it.
 
 All modes now save into **`download/` inside this project**, rather than Windows
 Downloads. For system audio, stopping capture produces
@@ -94,7 +135,7 @@ are neither integrated nor installed by this live mode.
 4. Double-click **`run_beat_tracker.bat`**, choose **3** for Video Export, and paste a path such as
    `"C:\Users\Student\Music\my song.wav"` and press Enter. Spaces and quotes work.
    After success or failure, enter Y to export another file or N to return to the
-   mode menu; choose 4 to exit. Invalid input is asked again.
+   mode menu; choose 5 to exit. Invalid input is asked again.
 
 Optional high-quality mode from CMD:
 

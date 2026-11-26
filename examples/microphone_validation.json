@@ -1,0 +1,37 @@
+{
+  "sourceType": "windows.wasapi.microphone",
+  "deviceName": "\u9ea6\u514b\u98ce\u9635\u5217 (\u9002\u7528\u4e8e\u6570\u5b57\u9ea6\u514b\u98ce\u7684\u82f1\u7279\u5c14\u00ae \u667a\u97f3\u6280\u672f)",
+  "sampleRate": 48000,
+  "durationSeconds": 1.2586666666666666,
+  "featureRows": 118,
+  "microphone": true,
+  "audioPlayback": false,
+  "videoCodec": "h264",
+  "audioCodec": "aac",
+  "startedByButton": true,
+  "streamReleased": true,
+  "backendTerminated": true,
+  "workerStopped": true,
+  "diagnostics": {
+    "analysisDroppedBuffers": 0,
+    "analysisDroppedSamples": 0,
+    "playbackUnderruns": 0,
+    "decoderUnderruns": 0,
+    "diagnosticDrops": 0,
+    "guiDroppedUpdates": 0,
+    "analysedBlocks": 118,
+    "maxQueueDelayMs": 4.338000027928501,
+    "totalProcessingMs": 140.26940031908453,
+    "maxProcessingMs": 19.680599973071367,
+    "processingOverruns": 1,
+    "captureOverflows": 0,
+    "analysisPausedSamples": 0,
+    "meanProcessingMs": 1.1887237315176655,
+    "audioRecording": {
+      "droppedBuffers": 0,
+      "droppedSamples": 0,
+      "silenceReplacementSamples": 0
+    }
+  },
+  "temporaryAudioRemoved": true
+}

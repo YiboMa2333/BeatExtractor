@@ -1,0 +1,141 @@
+{
+  "source": "synthetic_features_120bpm.wav",
+  "analysisMethod": "librosa.offline.features.v1",
+  "estimatedBpm": 117.45383522727273,
+  "durationSeconds": 8.0,
+  "beatCount": 14,
+  "beats": [
+    {
+      "beatIndex": 1,
+      "timeSeconds": 1.0216780045351475,
+      "amplitude": 0.16019605100154877,
+      "loudnessDb": -15.906963878565568,
+      "timbreCentroid": 67.75652531428847,
+      "timbreBandwidth": 105.6208669372789,
+      "beatStrength": 6.897103786468506
+    },
+    {
+      "beatIndex": 2,
+      "timeSeconds": 1.5325170068027212,
+      "amplitude": 0.16019606590270996,
+      "loudnessDb": -15.906963070619087,
+      "timbreCentroid": 69.73467641254376,
+      "timbreBandwidth": 110.20271468882746,
+      "beatStrength": 4.957468509674072
+    },
+    {
+      "beatIndex": 3,
+      "timeSeconds": 2.020136054421769,
+      "amplitude": 0.05005861818790436,
+      "loudnessDb": -26.0104228555031,
+      "timbreCentroid": 69.17352314638717,
+      "timbreBandwidth": 154.01972584723262,
+      "beatStrength": 4.344245433807373
+    },
+    {
+      "beatIndex": 4,
+      "timeSeconds": 2.5309750566893423,
+      "amplitude": 0.16019606590270996,
+      "loudnessDb": -15.906963070619087,
+      "timbreCentroid": 69.29578008318309,
+      "timbreBandwidth": 109.22469788798037,
+      "beatStrength": 5.313121795654297
+    },
+    {
+      "beatIndex": 5,
+      "timeSeconds": 3.01859410430839,
+      "amplitude": 0.16019605100154877,
+      "loudnessDb": -15.906963878565568,
+      "timbreCentroid": 67.48037878596718,
+      "timbreBandwidth": 104.93827038919288,
+      "beatStrength": 6.237245082855225
+    },
+    {
+      "beatIndex": 6,
+      "timeSeconds": 3.5294331065759637,
+      "amplitude": 0.05005861818790436,
+      "loudnessDb": -26.0104228555031,
+      "timbreCentroid": 70.550232768957,
+      "timbreBandwidth": 157.51451656910473,
+      "beatStrength": 4.058468818664551
+    },
+    {
+      "beatIndex": 7,
+      "timeSeconds": 4.017052154195011,
+      "amplitude": 0.16019606590270996,
+      "loudnessDb": -15.906963070619087,
+      "timbreCentroid": 67.3683403285834,
+      "timbreBandwidth": 104.6572774124345,
+      "beatStrength": 5.885456562042236
+    },
+    {
+      "beatIndex": 8,
+      "timeSeconds": 4.527891156462585,
+      "amplitude": 0.16019605100154877,
+      "loudnessDb": -15.906963878565568,
+      "timbreCentroid": 68.61871739078546,
+      "timbreBandwidth": 107.67614292827571,
+      "beatStrength": 6.255744934082031
+    },
+    {
+      "beatIndex": 9,
+      "timeSeconds": 5.015510204081632,
+      "amplitude": 0.05005861818790436,
+      "loudnessDb": -26.0104228555031,
+      "timbreCentroid": 68.82102488370677,
+      "timbreBandwidth": 153.08759847763548,
+      "beatStrength": 3.597158432006836
+    },
+    {
+      "beatIndex": 10,
+      "timeSeconds": 5.526349206349207,
+      "amplitude": 0.16019605100154877,
+      "loudnessDb": -15.906963878565568,
+      "timbreCentroid": 68.35440339209092,
+      "timbreBandwidth": 107.05696091229036,
+      "beatStrength": 7.31495475769043
+    },
+    {
+      "beatIndex": 11,
+      "timeSeconds": 6.013968253968254,
+      "amplitude": 0.16019605100154877,
+      "loudnessDb": -15.906963878565568,
+      "timbreCentroid": 67.18721005233083,
+      "timbreBandwidth": 104.1974696408978,
+      "beatStrength": 5.104357719421387
+    },
+    {
+      "beatIndex": 12,
+      "timeSeconds": 6.524807256235827,
+      "amplitude": 0.05005861818790436,
+      "loudnessDb": -26.0104228555031,
+      "timbreCentroid": 69.71439700043058,
+      "timbreBandwidth": 155.41703755294688,
+      "beatStrength": 4.977834701538086
+    },
+    {
+      "beatIndex": 13,
+      "timeSeconds": 7.012426303854875,
+      "amplitude": 0.16019606590270996,
+      "loudnessDb": -15.906963070619087,
+      "timbreCentroid": 67.11581938756069,
+      "timbreBandwidth": 104.01418270607991,
+      "beatStrength": 4.678104400634766
+    },
+    {
+      "beatIndex": 14,
+      "timeSeconds": 7.523265306122449,
+      "amplitude": 0.16019605100154877,
+      "loudnessDb": -15.906963878565568,
+      "timbreCentroid": 67.9313457515136,
+      "timbreBandwidth": 106.04631878151456,
+      "beatStrength": 7.206567764282227
+    }
+  ],
+  "analysisParameters": {
+    "sampleRate": 22050,
+    "hopLength": 512,
+    "featureFrameLength": 2048,
+    "beatIndexBase": 1
+  }
+}

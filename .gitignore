@@ -2,3 +2,14 @@
 venv/
 __pycache__/
 *.pyc
+tools/ffmpeg/
+.beat-render-*/
+*_visualisation*.mp4
+*_beats*.json
+!examples/*_beats.json
+!examples/*_visualisation.mp4
+*_features*.json
+*_ecg*.mp4
+!examples/*_features.json
+!examples/*_ecg.mp4
+.live-record-*/

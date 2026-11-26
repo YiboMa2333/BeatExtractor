@@ -1,0 +1,31 @@
+{
+  "sourceType": "windows.wasapi.loopback",
+  "deviceName": "\u626c\u58f0\u5668 (Senary Audio) [Loopback]",
+  "sampleRate": 48000,
+  "captureDurationSeconds": 2.1333333333333333,
+  "featureRows": 177,
+  "measuredPeakAmplitude": 0.009187698364257812,
+  "reportedInputLatencySeconds": 0.022,
+  "microphone": false,
+  "captureReplaysAudio": false,
+  "diagnostics": {
+    "analysisDroppedBuffers": 0,
+    "analysisDroppedSamples": 0,
+    "playbackUnderruns": 0,
+    "decoderUnderruns": 0,
+    "diagnosticDrops": 0,
+    "guiDroppedUpdates": 0,
+    "analysedBlocks": 177,
+    "maxQueueDelayMs": 0.6298999942373484,
+    "totalProcessingMs": 149.9664000584744,
+    "maxProcessingMs": 3.4225000126753002,
+    "processingOverruns": 0,
+    "captureOverflows": 0,
+    "analysisPausedSamples": 11776,
+    "meanProcessingMs": 0.8472677969405333
+  },
+  "streamReleased": true,
+  "backendTerminated": true,
+  "workerStopped": true,
+  "hiddenGuiAndPauseResumeVerified": true
+}

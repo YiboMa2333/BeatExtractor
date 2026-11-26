@@ -1,0 +1,4 @@
+-r requirements.txt
+sounddevice>=0.5.3,<0.6
+ijson>=3.3,<4
+PyAudioWPatch>=0.2.12.9,<0.3; sys_platform == "win32"

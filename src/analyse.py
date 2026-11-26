@@ -10,6 +10,42 @@ import numpy as np
 
 SAMPLE_RATE = 22050
 HOP_LENGTH = 512
+FRAME_LENGTH = 2048
+
+
+def beat_features(samples, sr, frames, onset):
+    """Evaluate only the selected grid frames, in small batches rather than full-song spectra.
+
+    The centered 2048-sample windows are identical to the corresponding columns
+    of a full centered STFT. RMS uses unwindowed samples; timbre uses Hann windows.
+    No-energy spectral moments and log(0) are undefined, so we export null.
+    These are signal descriptors, not perceptual loudness or timbre identification.
+    """
+    beats = []
+    for start in range(0, len(frames), 128):
+        selected = frames[start:start + 128]
+        windows = np.zeros((len(selected), FRAME_LENGTH), dtype=np.float32)
+        for row, frame in enumerate(selected):
+            left = int(frame) * HOP_LENGTH - FRAME_LENGTH // 2
+            lo, hi = max(0, left), min(len(samples), left + FRAME_LENGTH)
+            windows[row, lo-left:hi-left] = samples[lo:hi]
+        rms = librosa.feature.rms(y=windows, frame_length=FRAME_LENGTH,
+                                 hop_length=FRAME_LENGTH, center=False)[:, 0, 0]
+        magnitude = np.abs(librosa.stft(windows, n_fft=FRAME_LENGTH,
+                                        hop_length=FRAME_LENGTH, center=False))[:, :, 0].T
+        centroids = librosa.feature.spectral_centroid(S=magnitude, sr=sr)
+        bandwidths = librosa.feature.spectral_bandwidth(S=magnitude, sr=sr, centroid=centroids)
+        for row, frame in enumerate(selected):
+            amplitude = float(rms[row])
+            has_energy = float(magnitude[:, row].sum()) > 1e-12
+            beats.append(dict(beatIndex=len(beats) + 1,
+                              timeSeconds=float(frame * HOP_LENGTH / sr),
+                              amplitude=amplitude,
+                              loudnessDb=float(20 * np.log10(amplitude)) if amplitude > 0 else None,
+                              timbreCentroid=float(centroids[0, row]) if has_energy else None,
+                              timbreBandwidth=float(bandwidths[0, row]) if has_energy else None,
+                              beatStrength=float(onset[int(frame)])))
+    return beats
 
 
 def validate_path(raw):
@@ -73,26 +109,29 @@ def analyse(path, progress):
     onset = librosa.onset.onset_strength(y=samples, sr=sr, hop_length=HOP_LENGTH)
     progress(45, 'Calculated onset strength.')
     active = np.max(np.abs(samples)) > 1e-8 and np.any(onset > 1e-8)
-    tempo = float(np.asarray(librosa.feature.tempo(
-        onset_envelope=onset, sr=sr, hop_length=HOP_LENGTH)).flat[0]) if active else 0.0
-    progress(65, 'Estimated tempo.')
-    frames = librosa.beat.beat_track(onset_envelope=onset, sr=sr,
-        hop_length=HOP_LENGTH, bpm=tempo)[1] if active else np.array([])
-    times = librosa.frames_to_time(frames, sr=sr, hop_length=HOP_LENGTH)
-    times = sorted(set(float(t) for t in times if np.isfinite(t) and 0 <= t <= duration))
-    if len(times) < 2:
-        times, tempo = [], 0.0
-    progress(80, 'Detected beat positions and converted timestamps.')
-    result = dict(source=path.name, analysisMethod='librosa.offline',
+    # Let beat_track estimate tempo once; avoid a second identical tempo pass.
+    tempo, frames = librosa.beat.beat_track(onset_envelope=onset, sr=sr,
+        hop_length=HOP_LENGTH) if active else (0.0, np.array([], dtype=int))
+    tempo = float(np.asarray(tempo).flat[0])
+    frames = sorted(set(int(f) for f in frames if 0 <= f < len(onset)
+                        and f * HOP_LENGTH / sr <= duration))
+    if len(frames) < 2:
+        frames, tempo = [], 0.0
+    progress(65, 'Estimated tempo and detected beat positions.')
+    beats = beat_features(samples, sr, frames, onset)
+    progress(80, 'Mapped RMS, onset strength and spectral features to beat frames.')
+    result = dict(source=path.name, analysisMethod='librosa.offline.features.v1',
                   estimatedBpm=tempo, durationSeconds=duration,
-                  beatCount=len(times), beatTimesSeconds=times)
+                  beatCount=len(beats), beats=beats,
+                  analysisParameters=dict(sampleRate=sr, hopLength=HOP_LENGTH,
+                                          featureFrameLength=FRAME_LENGTH, beatIndexBase=1))
     progress(90, 'Prepared JSON output.')
     return result
 
 
 def save_result(result, folder):
     folder.mkdir(parents=True, exist_ok=True)
-    stem = Path(result['source']).stem + '_beats'
+    stem = Path(result['source']).stem + '_features'
     number = 0
     while True:
         path = folder / (stem + (f' ({number})' if number else '') + '.json')

@@ -1,0 +1,71 @@
+{
+  "dsp": {
+    "sampleRate": 44100,
+    "hopSize": 512,
+    "fftSize": 2048,
+    "durationSeconds": 8,
+    "groundTruthBeats": 15,
+    "estimatedBpm": 119.99927438080495,
+    "onsets": {
+      "matched": 15,
+      "missed": 0,
+      "extra": 0,
+      "maxAbsoluteErrorMs": 22.403628117913854,
+      "meanAbsoluteErrorMs": 17.003779289493554
+    },
+    "estimatedBeats": {
+      "matched": 10,
+      "missed": 5,
+      "extra": 0,
+      "maxAbsoluteErrorMs": 22.403628117913854,
+      "meanAbsoluteErrorMs": 18.544217687074795
+    },
+    "timingToleranceMs": 50,
+    "note": "Estimated beats intentionally omit tempo warm-up events.",
+    "meanProcessingMs": 0.1055950725339758,
+    "maxProcessingMs": 6.757700000889599,
+    "blockBudgetMs": 11.609977324263038
+  },
+  "decoders": {
+    "wav": {
+      "verified": true
+    },
+    "flac": {
+      "verified": true
+    },
+    "mp3": {
+      "verified": true
+    }
+  },
+  "hardware": {
+    "completed": true,
+    "playedDurationSeconds": 2.0,
+    "features": 173,
+    "reportedOutputLatencySeconds": 0.09287981859410431,
+    "diagnostics": {
+      "analysisDroppedBuffers": 0,
+      "analysisDroppedSamples": 0,
+      "playbackUnderruns": 0,
+      "decoderUnderruns": 0,
+      "diagnosticDrops": 0,
+      "guiDroppedUpdates": 0,
+      "analysedBlocks": 173,
+      "maxQueueDelayMs": 3.645299992058426,
+      "totalProcessingMs": 205.672700132709,
+      "maxProcessingMs": 3.0941999866627157,
+      "processingOverruns": 0,
+      "meanProcessingMs": 1.1888595383393583
+    },
+    "pauseResumeExercised": true,
+    "hiddenTkWindowExercised": true,
+    "threadsStopped": true,
+    "streamClosed": true,
+    "caveat": "PortAudio API playback verified; physical speaker audibility not independently measured.",
+    "closeDuringPlayback": {
+      "completed": false,
+      "playedDurationSeconds": 0.39383219954648524,
+      "streamClosed": true,
+      "threadsStopped": true
+    }
+  }
+}

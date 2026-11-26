@@ -19,6 +19,7 @@ def validate():
         engine = LoopbackEngine(Path(folder))
         window = LiveWindow(engine)
         window.root.withdraw()
+        window.root.after(100,window.play_button.invoke)  # Simulate an explicit user Start click.
         sr = engine.info.samplerate
         tone = .005*np.sin(2*np.pi*440*np.arange(sr*2)/sr)
         def start_tone():
@@ -37,6 +38,12 @@ def validate():
         max_peak = max((row['peakAmplitude'] for row in data['features']), default=0)
         if max_peak < .001 or not data['features']:
             raise RuntimeError('No test audio measured from loopback; check Windows output routing/volume.')
+        from video_export import probe, find_tools
+        if not engine.video_path or not engine.video_path.is_file():
+            raise RuntimeError('Captured JSON did not produce an ECG MP4.')
+        video = probe(engine.video_path, find_tools()[1])
+        v = next(s for s in video['streams'] if s['codec_type']=='video')
+        a = next(s for s in video['streams'] if s['codec_type']=='audio')
         return dict(sourceType=data['sourceType'], deviceName=data['capture']['deviceName'],
                     sampleRate=data['sampleRate'], captureDurationSeconds=data['durationSeconds'],
                     featureRows=data['recordCounts']['features'], measuredPeakAmplitude=max_peak,
@@ -44,6 +51,9 @@ def validate():
                     microphone=data['capture']['microphone'], captureReplaysAudio=data['capture']['outputPlayback'],
                     diagnostics=data['diagnostics'], streamReleased=engine.stream_released,
                     backendTerminated=engine.terminated, workerStopped=not engine.analysis_thread.is_alive(),
+                    videoExportVerified=True, videoCodec=v['codec_name'], audioCodec=a['codec_name'],
+                    videoFrames=int(v['nb_frames']), videoFrameRate=v['avg_frame_rate'],
+                    temporaryAudioRemoved=not engine.audio_capture.path.exists(),
                     hiddenGuiAndPauseResumeVerified=True)
 
 

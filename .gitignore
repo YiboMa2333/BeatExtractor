@@ -13,3 +13,6 @@ tools/ffmpeg/
 !examples/*_features.json
 !examples/*_ecg.mp4
 .live-record-*/
+.capture-audio-*/
+download/*
+!download/.gitkeep

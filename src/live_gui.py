@@ -5,17 +5,19 @@ import threading
 
 
 class LiveWindow:
-    def __init__(self, engine):
+    def __init__(self, engine, engine_factory=None):
         import tkinter as tk
         from tkinter import ttk
         self.tk, self.engine = tk, engine
+        self.engine_factory = engine_factory
         self.loopback = bool(getattr(engine, 'is_loopback', False))
         self.root = tk.Tk()
         self.root.title('Super Happy Space 2.0 - live audio beat visualisation')
         self.root.geometry('1040x620')
         self.root.configure(bg='#07101b')
         self.root.protocol('WM_DELETE_WINDOW', self.close)
-        self.status = tk.StringVar(value='Ready - Windows speaker loopback, no microphone' if self.loopback else 'Ready - local file playback only, no microphone')
+        self.status = tk.StringVar(value='Stopped. Open your music source, then click Start recording.' if self.loopback
+                                   else 'Stopped. Click Play to start playback and analysis.')
         self.metadata = tk.StringVar(value=engine.path.name)
         self.warning = tk.StringVar(value='BPM: Estimating... | Yellow: onsets | Cyan: estimated beats')
         tk.Label(self.root, text='Super Happy Space 2.0', bg='#07101b', fg='white', font=('Segoe UI', 22)).pack(pady=12)
@@ -38,14 +40,20 @@ class LiveWindow:
             self.progress.pack_forget()  # An open-ended capture has no total duration/percentage.
         controls = tk.Frame(self.root, bg='#07101b')
         controls.pack()
-        self.play_button = ttk.Button(controls, text='Start capture' if self.loopback else 'Play', command=self.play)
+        self.play_button = ttk.Button(controls, text='Start recording' if self.loopback else 'Play',
+                                      command=self.toggle_recording if self.loopback else self.play)
         self.play_button.pack(side='left', padx=5)
         self.pause_button = ttk.Button(controls, text='Pause analysis' if self.loopback else 'Pause', command=engine.pause)
-        self.pause_button.pack(side='left', padx=5)
+        if not self.loopback:
+            self.pause_button.pack(side='left', padx=5)
         self.resume_button = ttk.Button(controls, text='Resume analysis' if self.loopback else 'Resume', command=engine.resume)
-        self.resume_button.pack(side='left', padx=5)
+        if not self.loopback:
+            self.resume_button.pack(side='left', padx=5)
         self.stop_button = ttk.Button(controls, text='Stop & save' if self.loopback else 'Stop', command=self.stop)
-        self.stop_button.pack(side='left', padx=5)
+        if not self.loopback:
+            self.stop_button.pack(side='left', padx=5)
+        for button in (self.pause_button,self.resume_button,self.stop_button):
+            button.configure(state='disabled')
         tk.Label(self.root, textvariable=self.status, bg='#07101b', fg='#b5dbe2', wraplength=990).pack(pady=12)
         self.pending = deque(maxlen=512)
         self.events = deque(maxlen=2048)
@@ -53,16 +61,47 @@ class LiveWindow:
         self.onsets = self.beats = 0
         self.finishing = self.done = self.closing = False
         self.finish_error = None
-        self.play_id = self.root.after(50, self.play)
+        self.play_id = None  # Never start playback/capture merely by opening the window.
         self.tick_id = self.root.after(0, self.tick)
+
+    def toggle_recording(self):
+        if self.finishing and not self.done:
+            return
+        if self.done:
+            if not self.engine_factory:
+                return
+            try:
+                self.engine = self.engine_factory()
+            except Exception as error:
+                self.status.set(f'Could not start a new recording: {error}')
+                return
+            self.pending.clear()
+            self.events.clear()
+            self.last_row = self.spectrum = None
+            for item in self.spectrum_bars:
+                self.spectrum_canvas.coords(item,0,0,0,0)
+            self.onsets = self.beats = 0
+            self.finishing = self.done = self.closing = False
+            self.finish_error = None
+            self.warning.set('BPM: Estimating... | Yellow: onsets | Cyan: estimated beats')
+        if self.engine.started:
+            self.stop()
+        else:
+            self.play()
 
     def play(self):
         if self.engine.started or self.finishing:
             return
         try:
             self.engine.start()
-            self.play_button.configure(state='disabled')
-            self.status.set('Capturing Windows output. Play music in any app; Stop or close saves JSON.' if self.loopback
+            if self.loopback:
+                self.play_button.configure(text='Stop recording', state='normal')
+            else:
+                self.play_button.configure(state='disabled')
+            if not self.loopback:
+                for button in (self.pause_button,self.resume_button,self.stop_button):
+                    button.configure(state='normal')
+            self.status.set('Capturing Windows output. Stop or close saves JSON first, then renders an ECG MP4.' if self.loopback
                             else 'Playing. Feature timestamps follow source samples and the output-device clock.')
         except Exception as error:
             self.status.set(str(error))
@@ -79,6 +118,8 @@ class LiveWindow:
         self.finishing = True
         for button in (self.play_button, self.pause_button, self.resume_button, self.stop_button):
             button.configure(state='disabled')
+        if self.loopback:
+            self.play_button.configure(text='Saving / rendering...')
         self.status.set('Stopping workers and writing/validating JSON...')
         def finish_worker():
             try:
@@ -97,6 +138,8 @@ class LiveWindow:
 
     def destroy(self):
         for token in (self.play_id, self.tick_id):
+            if token is None:
+                continue
             try:
                 self.root.after_cancel(token)
             except self.tk.TclError:
@@ -133,7 +176,10 @@ class LiveWindow:
         self.metadata.set(f'{source} | {time_label} | BPM {bpm}\n'
                           f'RMS {rms} | Centroid {centroid} | Onsets {self.onsets} | Estimated beats {self.beats}')
         stats = engine.stats
-        if self.loopback and (stats.get('captureOverflows', 0) or stats['analysisDroppedBuffers']):
+        audio_capture = getattr(engine, 'audio_capture', None)
+        if audio_capture and audio_capture.stats['droppedBuffers']:
+            self.warning.set(f"Audio recording dropped {audio_capture.stats['droppedBuffers']} buffers; those gaps become marked silence in the MP4.")
+        elif self.loopback and (stats.get('captureOverflows', 0) or stats['analysisDroppedBuffers']):
             self.warning.set(f"Capture overflows {stats['captureOverflows']}; analysis dropped {stats['analysisDroppedBuffers']} buffers. See JSON diagnostics.")
         elif stats['analysisDroppedBuffers'] or stats['decoderUnderruns'] or stats['playbackUnderruns']:
             self.warning.set(f"Analysis dropped {stats['analysisDroppedBuffers']} buffers; "
@@ -143,6 +189,8 @@ class LiveWindow:
             self.warning.set(f"DSP exceeded its block-time budget {stats['processingOverruns']} times. Onsets: yellow; estimated beats: cyan.")
         self.progress['value'] = position
         self.draw(position)
+        if self.finishing and not self.done and getattr(engine, 'export_status', ''):
+            self.status.set(engine.export_status)
         if not self.finishing and (engine.playback_finished.is_set() or engine.error):
             self.finalize(not engine.error and engine.submitted_samples >= engine.info.frames)
         if self.done:
@@ -150,9 +198,14 @@ class LiveWindow:
                 self.destroy()
                 return
             text = f'Saved: {engine.result_path}' if engine.result_path else 'No final JSON saved.'
+            if getattr(engine, 'video_path', None):
+                text += f' | MP4: {engine.video_path}'
             if self.finish_error or engine.error:
                 text += ' Error: '+str(self.finish_error or engine.error)
             self.status.set(text+' Close this window to return to CMD.')
+            if self.loopback and self.engine_factory:
+                self.play_button.configure(text='Start recording',state='normal')
+                self.status.set(text+' Click Start recording for a new session, or close to return to CMD.')
         self.tick_id = self.root.after(max(1, round(1000/engine.settings.gui_fps)), self.tick)
 
     def draw(self, position):
@@ -193,11 +246,16 @@ def run_live(path, folder, settings=None):
     return LiveWindow(engine).run()
 
 
-def run_loopback(folder, settings=None):
+def run_loopback(folder, settings=None, video_mode='preview'):
     from loopback_engine import LoopbackEngine
-    engine = LoopbackEngine(folder, settings)
+    def factory():
+        return LoopbackEngine(folder, settings, video_mode=video_mode)
+    engine = factory()
+    window = None
     try:
-        return LiveWindow(engine).run()
+        window = LiveWindow(engine, engine_factory=factory)
+        return window.run()
     finally:
-        if not engine.finalized:
-            engine.finish()
+        current = window.engine if window else engine
+        if not current.finalized:
+            current.finish()

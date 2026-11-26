@@ -93,8 +93,8 @@ source-content samples; the gap is recorded. Stop/window close aborts playback,
 drains analysis, excludes measurements after the heard-content cutoff and saves
 a partial recording. EOF drains output normally before finalisation. There is no
 seeking or in-session restart; select Live mode again for a fresh decoder/DSP
-state. Play starts the initial session automatically (and is available before
-start); it is disabled once running, while Pause/Resume/Stop remain available.
+state. The window starts stopped; Play starts the initial file-playback session
+only when clicked. It is disabled once running, while Pause/Resume/Stop remain available.
 
 Device/OS/DAC timestamps are reported timing, not an independent measurement of
 physical speaker output. Analysis window size, confirmation delay, queue backlog,

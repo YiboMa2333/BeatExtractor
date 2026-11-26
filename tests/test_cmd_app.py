@@ -114,8 +114,7 @@ class FeatureTests(unittest.TestCase):
         self.assertFalse(list(self.root.glob('*.json')))
 
     def test_downloads_fallback_and_denied_output(self):
-        with patch.object(analyse, '_known_downloads', side_effect=OSError('Unavailable')):
-            self.assertEqual(analyse.downloads_folder(), Path.home()/'Downloads')
+        self.assertEqual(analyse.downloads_folder(), Path(analyse.__file__).resolve().parents[1]/'download')
         with patch.object(Path, 'mkdir', side_effect=PermissionError('Access denied')):
             with self.assertRaises(PermissionError):
                 analyse.save_result({'source': 'test.wav'}, self.root)

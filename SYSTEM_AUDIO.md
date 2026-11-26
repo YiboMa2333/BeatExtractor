@@ -1,10 +1,12 @@
 # Live Windows system audio (default Live Analysis mode)
 
 Choose **2** after launching `run_beat_tracker.bat`. No local file is requested.
-The application captures the default Windows WASAPI speaker/headphone output,
+The window opens **stopped**. Open your music source, then click **Start recording**.
+The application captures the default Windows WASAPI speaker/headphone output
 using PyAudioWPatch's loopback endpoint. Play music in any other application.
-There is no microphone capture, duplicate playback, MP4 export or decorative
-visual engine in this workflow.
+There is no microphone capture, duplicate playback or decorative visual engine.
+When stopped, this workflow saves JSON first, then creates an ECG MP4 containing
+the recorded Windows audio. All outputs default to this project's `download/`.
 
 Install/update live dependencies using the project's own environment:
 
@@ -37,12 +39,14 @@ the graph can wait until audio starts. If an endpoint stops or is unplugged, the
 session reports an error and saves available data; start a new session after
 fixing routing.
 
-- **Start capture** starts the session automatically when the GUI opens.
-- **Pause analysis** stops feature recording but does not pause external music.
-- **Resume analysis** continues at the current capture position, reporting the
-  skipped sample interval and resetting rhythm history across it.
-- **Stop & save** or window close releases capture and writes the JSON. There is
-  no song EOF or known total duration, so no fictitious playback percentage.
+- **Start recording** begins capture and changes the same button to **Stop recording**.
+- **Stop recording** or window close releases capture, writes JSON first, then renders
+  and validates the ECG MP4 with captured audio. Wait for rendering to finish.
+  Capture has no known total duration; post-capture video progress uses actual frames.
+- While saving/rendering, the button is disabled. After completion, **Start recording**
+  begins a fresh session with reset feature/rhythm state and unique output names.
+- Closing the window before starting creates no output. The capture does not start
+  automatically when the window opens and never controls external music playback.
 
 The GUI uses the same bounded feature/ECG/spectrum pipeline as file-based live
 analysis. Yellow dashed events are onsets; taller cyan events are estimated
@@ -51,8 +55,9 @@ heuristic lacks confidence. This is not a medical ECG or a robust downbeat track
 
 ## Data, clock and limitations
 
-The unique output name is **Downloads/system_audio_live_features.json**, then
-numbered alternatives. Source metadata says `system_audio` and
+The outputs are **download/system_audio_live_features.json** and
+**download/system_audio_live_ecg.mp4**, with numbered alternatives instead of
+overwrites. Source metadata says `system_audio` and
 `sourceType: windows.wasapi.loopback`; no song filename is guessed. Capture
 metadata records endpoint name/index, native sample rate/channel count, reported
 input latency, microphone/output-playback flags and pause semantics.
@@ -78,8 +83,13 @@ the IXN 25 ms end-to-end alignment target.
 `loopback_engine.py` selects and validates a speaker-loopback endpoint, then
 reuses the existing analysis worker, NumPy DSP, bounded queues and incremental
 recorder. Capture callbacks only retain a PCM view and offer it to a bounded
-queue; FFT, GUI and disk work remain outside callbacks. It does not capture raw
-audio to disk or replay it. Optional file playback remains available using
+queues; FFT, GUI and disk work remain outside callbacks. A separate audio writer
+records received PCM to a temporary RF64 WAV. JSON is published before video
+rendering; the video reads those same onset/estimated-beat events, never another
+detector's guesses. Audio recording spans analysis pauses, preserving the shared
+sample timeline. Temporary audio is deleted only after verified MP4 success and
+retained for recovery on failure; see [OUTPUTS.md](OUTPUTS.md). Captured audio is
+never replayed live. Optional file playback remains available using
 `--action live --live-source file` with a local filename; its details are in
 [LIVE_ANALYSIS.md](LIVE_ANALYSIS.md).
 
@@ -96,7 +106,7 @@ audio, and validates recording and shutdown. Its temporary recording is removed;
 the report contains metrics. Test-tone playback is a test utility, not part of
 normal loopback operation.
 
-All 41 automated tests passed. A real Senary Audio speaker-loopback session at
+All 45 automated tests passed. A real Senary Audio speaker-loopback session at
 48000 Hz was verified: nonzero captured audio, zero capture overflows or dropped analysis buffers, reported
 input latency 22 ms, and released stream/backend/worker. These values are one
 device-specific run; see [the measured report](examples/loopback_validation.json).

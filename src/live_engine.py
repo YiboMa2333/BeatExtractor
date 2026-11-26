@@ -209,6 +209,8 @@ class LiveEngine:
                 delay_ms = (began-queued_at)*1000
                 row, events, spectrum = self.dsp.process(block, start)
                 elapsed_ms = (perf_counter()-began)*1000
+                if hasattr(self, 'audio_capture') and self.audio_capture:
+                    row['recordedAudioSampleIndex'] = start+len(block)
                 self.stats['analysedBlocks'] += 1
                 self.stats['maxQueueDelayMs'] = max(self.stats['maxQueueDelayMs'], delay_ms)
                 self.stats['maxProcessingMs'] = max(self.stats['maxProcessingMs'], elapsed_ms)

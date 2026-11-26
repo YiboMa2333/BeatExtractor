@@ -1,10 +1,16 @@
 # Super Happy Space 2.0 — music analyser
 
 Choose a mode in CMD: **[1] Offline Analysis** (WAV to features JSON),
-**[2] Live Analysis** (capture Windows system audio, show live ECG/features and record JSON),
+**[2] Live Analysis** (capture Windows audio, save JSON first, then export an ECG MP4),
 **[3] Video Export** (the existing feature extraction plus ECG MP4), or **[4] Exit**.
 Video defaults to a fast **1280 x 720, 24 FPS preview**. No GPU, decorative engine,
 microphone, cloud service, recording import or manual alignment is needed.
+
+All modes now save into **`download/` inside this project**, rather than Windows
+Downloads. For system audio, stopping capture produces
+**`system_audio_live_features.json` first**, followed by **`system_audio_live_ecg.mp4`**
+with the captured Windows audio and the ECG events from that JSON. See
+[OUTPUTS.md](OUTPUTS.md) for the JSON-first workflow and recovery instructions.
 
 ## Live mode: setup and use
 
@@ -16,21 +22,27 @@ Install the optional live dependencies with this folder's Python:
 
 Use a Python installation with Tcl/Tk (standard Windows installer option).
 Double-click `run_beat_tracker.bat` and choose **2**. There is **no file-path
-prompt**: the GUI automatically captures the Windows default speaker/headphone
-output using WASAPI loopback. Play music in any application. No microphone is
-opened, and captured audio is not replayed. Start/Pause analysis/Resume analysis/
-Stop & save controls accompany the scrolling ECG, RMS, centroid, spectrum, onset
+prompt**: the GUI opens **stopped**. Open your music source, then click
+**Start recording** to capture the Windows default speaker/headphone output using
+WASAPI loopback. The same button becomes **Stop recording**. No microphone is
+opened, and captured audio is not replayed. The Start/Stop button accompanies the
+scrolling ECG, RMS, centroid, spectrum, onset
 count, estimated beat count and BPM. Yellow dashed peaks are **onsets**; taller
 cyan peaks are **estimated beats**. The input includes all sounds routed to the
 selected Windows output endpoint, including notifications.
 BPM says **Estimating...** when insufficient regular rhythm has been observed.
 
-Stop or close the window to incrementally finalise and validate
-**`Downloads/system_audio_live_features.json`** (numbered when needed). Capture
+Click **Stop recording** (or close while recording) to incrementally finalise and validate
+**`download/system_audio_live_features.json`** first (numbered when needed). Capture
 does not know a song's name or EOF; timestamps are relative to the capture session.
-Pause pauses analysis/recording, not music in other applications, and its gap is
-recorded. Close the window to return to CMD. Live mode does not create an MP4 and
-does not require FFmpeg. Offline/video modes work without live dependencies.
+After JSON is saved, FFmpeg renders
+**`download/system_audio_live_ecg.mp4`** in the background; the live window shows
+progress and remains open until rendering finishes. FFmpeg/FFprobe are required
+for that MP4 step. If rendering fails, JSON and temporary audio are retained.
+Offline/video modes work without live dependencies.
+After export completes, the button returns to **Start recording** for a new,
+independent session. It is disabled while saving/rendering. Closing the idle
+window creates no recording or output files.
 
 Live settings can be selected without changing code:
 
@@ -44,7 +56,7 @@ Live settings can be selected without changing code:
 For loopback, `--device INDEX` selects a WASAPI loopback index from the list command;
 the example index 10 is machine-specific. Microphone endpoints are rejected. Select
 a new session if you change Windows output devices. `--output-dir DIR` optionally
-redirects files for tests; normal use defaults to Downloads. Optional local-file
+redirects files for tests; normal use defaults to this project's `download/`. Optional local-file
 live playback is retained explicitly with `--live-source file`:
 
 ```bat
@@ -90,7 +102,7 @@ Optional high-quality mode from CMD:
 run_beat_tracker.bat --quality
 ```
 
-Choose Video Export in that menu to use **1920 x 1080, 30 FPS**, with a slower encoding preset. For a single
+Video Export and captured-audio export both use **1920 x 1080, 30 FPS** with that option, with a slower encoding preset. For a single
 scripted run without the retry question:
 
 ```bat
@@ -99,8 +111,7 @@ scripted run without the retry question:
 ```
 
 `--output-dir DIR` optionally redirects outputs for testing/batch jobs; normal use
-always resolves Downloads through the Windows Known Folder API, with
-`~/Downloads` as a documented fallback. Missing folders are created and access
+uses the `download` folder beside this project's README and launcher. Missing folders are created and access
 errors reported. Existing files receive numbered alternatives, never silent
 overwrites. WAV inputs are never modified.
 
@@ -205,7 +216,7 @@ Tests check synthetic 120 BPM input, feature-window equivalence to full librosa
 arrays, undefined features, silence, original-file preservation, Y/N retries,
 JSON validation, real preview/quality exports, encoded spike pixels, AAC source
 frequency, durations, collisions and failure cleanup. A real Windows BAT test
-creates uniquely named test outputs in Downloads and removes only those outputs.
+creates uniquely named test outputs in the project's `download/` and removes only those outputs.
 FFmpeg-dependent tests explicitly skip when FFmpeg/FFprobe are absent.
 
 See [the current example](examples/README.md) for generated feature/ECG outputs.

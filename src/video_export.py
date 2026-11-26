@@ -48,6 +48,8 @@ def validate_mp4(path, duration, tools, size=None, fps=FPS):
             raise ValueError('Output duration does not match WAV within frame/AAC rounding tolerance.')
     if Fraction(video.get('avg_frame_rate', '0/1')) != fps:
         raise ValueError(f'Output must be {fps} FPS.')
+    if int(video.get('nb_frames', -1)) != math.ceil(duration*fps):
+        raise ValueError('Output dropped a rendered frame at the end of the audio timeline.')
     run = subprocess.run([ffmpeg, '-nostdin', '-v', 'error', '-xerror', '-i', str(path),
                           '-map', '0:v:0', '-map', '0:a:0', '-f', 'null', '-'],
                          capture_output=True, text=True, encoding='utf-8', errors='replace',
@@ -95,13 +97,20 @@ class EncodingProgress:
         self.thread.join(timeout=10)
 
 
-def export_video(wav, json_path, folder, mode='preview', progress=lambda *_: None, tools=None):
+def export_video(wav, json_path, folder, mode='preview', progress=lambda *_: None, tools=None, source_format='offline'):
     tools = tools or find_tools()
     ffmpeg, ffprobe = tools
     if mode not in MODES:
         raise ValueError('Choose preview or quality mode.')
     size, fps = MODES[mode]
-    data = load_features(json_path)  # The persisted features are the ONLY beat source.
+    if source_format == 'live':
+        from live_export import load_live_summary, LiveCaptureOverlay
+        loader = load_live_summary
+    elif source_format == 'offline':
+        loader = load_features
+    else:
+        raise ValueError('Unknown recording schema.')
+    data = loader(json_path)  # Persisted offline beats OR live events are the ONLY event source.
     duration = data['durationSeconds']
     wav_info = probe(wav, ffprobe)
     actual = float(wav_info['format']['duration'])
@@ -112,20 +121,23 @@ def export_video(wav, json_path, folder, mode='preview', progress=lambda *_: Non
     required = int(duration*750_000 + 25_000_000)
     if shutil.disk_usage(folder).free < required:
         raise OSError(f'Insufficient disk space: allow at least {required/1e6:.0f} MB free.')
-    destination = reserve_video(folder, data['source'])
+    destination = reserve_video(folder, data['source']+'_live' if source_format == 'live' else data['source'])
     work = process = encoding = None
+    renderer = None
     try:
         work = Path(tempfile.mkdtemp(prefix='.beat-render-', dir=folder))
         output, log = work/'render.mp4', work/'ffmpeg.log'
-        report = dict(quantisation_report(data, fps), mode=mode, width=size[0], height=size[1])
+        timing = quantisation_report(data, fps) if source_format == 'offline' else dict(fps=fps)
+        report = dict(timing, mode=mode, width=size[0], height=size[1])
         (work/'timing.json').write_text(json.dumps(report, indent=2), encoding='utf-8')
-        renderer = Overlay(data, size, fps)
+        renderer = (Overlay(data, size, fps) if source_format == 'offline'
+                    else LiveCaptureOverlay(json_path, size, fps, data))
         w, h = size
         command = [ffmpeg, '-hide_banner', '-loglevel', 'error', '-nostdin', '-y',
                    '-nostats', '-progress', 'pipe:1', '-f', 'rawvideo', '-pixel_format', 'rgb24',
                    '-video_size', f'{w}x{h}', '-framerate', str(fps), '-i', 'pipe:0',
                    '-i', str(wav.resolve()), '-map', '0:v:0', '-map', '1:a:0',
-                   '-t', str(duration), '-r', str(fps), '-c:v', 'libx264',
+                   '-r', str(fps), '-c:v', 'libx264',
                    '-preset', 'ultrafast' if mode == 'preview' else 'veryfast',
                    '-crf', '23' if mode == 'preview' else '20', '-pix_fmt', 'yuv420p',
                    '-c:a', 'aac', '-b:a', '192k', '-movflags', '+faststart', str(output)]
@@ -148,10 +160,13 @@ def export_video(wav, json_path, folder, mode='preview', progress=lambda *_: Non
             encoding.join()
         if code:
             raise RuntimeError('FFmpeg encoding failed.')
+        if source_format == 'live':
+            report.update(renderer.timing_report())
+            (work/'timing.json').write_text(json.dumps(report, indent=2), encoding='utf-8')
         progress(94, f'FFmpeg encoding completed: {encoding.frames} frames / {encoding.seconds:.3f}s reported.')
         progress(95, 'Verifying JSON, codecs, frame rate, duration and full audio/video decode...')
         validate_mp4(output, duration, tools, size, fps)
-        if load_features(json_path) != data:
+        if loader(json_path) != data:
             raise ValueError('Feature JSON changed during rendering.')
         os.replace(output, destination)  # Replaces only this invocation's exclusive placeholder.
         probe(destination, ffprobe)
@@ -174,3 +189,6 @@ def export_video(wav, json_path, folder, mode='preview', progress=lambda *_: Non
             detail = (work/'ffmpeg.log').read_text(encoding='utf-8', errors='replace')[-2000:].strip()
         diagnostics = f' Temporary files retained at: {work}' if work else ''
         raise RuntimeError(f'Video export failed: {error}. {detail}{diagnostics}') from error
+    finally:
+        if renderer and hasattr(renderer, 'close'):
+            renderer.close()

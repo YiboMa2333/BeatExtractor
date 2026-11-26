@@ -30,7 +30,7 @@ def export_workflow(argv=None):
     parser.add_argument('wav', nargs='?', help='Optional path for a single noninteractive run.')
     parser.add_argument('--mode', choices=('preview', 'quality'), default='preview',
                         help='preview: 720p/24 FPS; quality: 1080p/30 FPS')
-    parser.add_argument('--output-dir', type=Path, help='Optional test/batch destination; default: Downloads.')
+    parser.add_argument('--output-dir', type=Path, help='Optional test/batch destination; default: project download folder.')
     args = parser.parse_args(argv or [])
     print('='*52 + '\n   Super Happy Space 2.0\n   SONG FEATURES & ECG EXPORTER\n' + '='*52, flush=True)
     try:
@@ -121,7 +121,7 @@ def main(argv=None):
                     raise ValueError('System-audio mode does not take a file. Use --live-source file for local playback.')
                 from live_gui import run_loopback
                 print('Capturing the Windows default output device. Play audio in any app. No microphone is used.', flush=True)
-                saved, error = run_loopback(folder, settings)
+                saved, error = run_loopback(folder, settings, video_mode=args.mode)
             else:
                 from live_engine import require_live_dependencies
                 require_live_dependencies()
@@ -131,7 +131,10 @@ def main(argv=None):
             if error:
                 print(f'LIVE SESSION FAILED\nReason: {error}\nJSON: {saved or "not saved"}', flush=True)
                 return 1
-            print(f'LIVE SESSION FINISHED\nJSON:\n{saved}', flush=True)
+            if saved is None:
+                print('Live window closed without starting a recording. No output files were created.',flush=True)
+            else:
+                print(f'LIVE SESSION FINISHED\nJSON:\n{saved}', flush=True)
             return 0
         except Exception as error:
             print(f'LIVE ANALYSIS FAILED\nReason: {error}', flush=True)

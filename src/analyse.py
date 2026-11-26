@@ -65,11 +65,12 @@ def validate_path(raw):
 
 
 def downloads_folder():
-    """Resolve redirected Downloads via Windows; fall back to ~/Downloads."""
-    try:
-        return _known_downloads() or Path.home() / 'Downloads'
-    except (AttributeError, OSError):
-        return Path.home() / 'Downloads'
+    """Compatibility name: all modes now default to this project's download folder."""
+    return output_folder()
+
+
+def output_folder():
+    return Path(__file__).resolve().parents[1] / 'download'
 
 
 def _known_downloads():

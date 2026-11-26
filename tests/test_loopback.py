@@ -71,7 +71,7 @@ class LoopbackTests(unittest.TestCase):
                                    paContinue=0, paComplete=1, paAbort=2, paInputOverflow=2)
 
     def engine(self, blocks=2):
-        return LoopbackEngine(self.folder, LiveSettings(queue_blocks=blocks), self.api)
+        return LoopbackEngine(self.folder, LiveSettings(queue_blocks=blocks), self.api, export_mp4=False)
 
     def pcm(self):
         return np.full((512, 2), .125, dtype=np.float32).tobytes()

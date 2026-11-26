@@ -64,6 +64,7 @@ def validate_hardware():
         engine = LiveEngine(path, folder)
         window = LiveWindow(engine)
         window.root.withdraw()  # Exercises actual Tk widgets without showing test UI.
+        window.root.after(50,window.play_button.invoke)
         window.root.after(400, engine.pause)
         window.root.after(700, engine.resume)
         def finish_when_saved():
@@ -89,6 +90,7 @@ def validate_hardware():
         partial_engine = LiveEngine(path, folder)
         partial_window = LiveWindow(partial_engine)
         partial_window.root.withdraw()
+        partial_window.root.after(50,partial_window.play_button.invoke)
         partial_window.root.after(600, partial_window.close)
         partial_path, partial_error = partial_window.run()
         if partial_error or partial_path is None:

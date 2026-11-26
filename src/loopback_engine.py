@@ -57,7 +57,7 @@ def list_loopback_devices():
 class LoopbackEngine(LiveEngine):
     is_loopback = True
 
-    def __init__(self, folder, settings=None, audio_api=None):
+    def __init__(self, folder, settings=None, audio_api=None, export_mp4=True, video_mode='preview'):
         api = audio_api or require_loopback_dependencies()
         self.client = api.PyAudio()
         self.terminated = False
@@ -72,6 +72,10 @@ class LoopbackEngine(LiveEngine):
             self.capture_label = self.device_info['name']
             self.capture_latency = None
             self.stream_released = False
+            self.audio_capture = None
+            self.export_mp4, self.video_mode = export_mp4, video_mode
+            self.video_path = None
+            self.export_status = ''
             self.stats.update(captureOverflows=0, analysisPausedSamples=0)
         except BaseException:
             self.client.terminate()
@@ -84,6 +88,9 @@ class LoopbackEngine(LiveEngine):
         self.recorder = LiveRecorder(self.folder)
         self.started = True
         try:
+            from capture_audio import CaptureAudio
+            self.audio_capture = CaptureAudio(self.folder, self.info.samplerate, self.info.channels,
+                                              blocks=max(8,self.settings.queue_blocks*4))
             self.analysis_thread = threading.Thread(target=self._analyse, daemon=True)
             self.analysis_thread.start()
             self.stream = self.client.open(format=self.audio_api.paFloat32,
@@ -97,7 +104,13 @@ class LoopbackEngine(LiveEngine):
             self.request_stop()
             self._release_capture()
             self.analysis_stop.set()
-            self.analysis_thread.join(timeout=5)
+            if self.analysis_thread:
+                self.analysis_thread.join(timeout=5)
+            if self.audio_capture:
+                try:
+                    self.audio_capture.finish(self.frozen_position)
+                except Exception:
+                    pass  # Preserve the original start error and retained audio diagnostics.
             self.recorder.close()
             raise
 
@@ -115,6 +128,9 @@ class LoopbackEngine(LiveEngine):
             return None, self.audio_api.paAbort
         # A read-only view retains the callback bytes; no decoding, FFT or disk I/O here.
         block = np.frombuffer(in_data, dtype=np.float32).reshape(frames, self.info.channels)
+        if self.audio_capture:
+            # Independent of analysis queue/pauses; no captured audio is written in this callback.
+            self.audio_capture.offer(start, block)
         if self.paused.is_set():
             self.submitted_samples += frames
             self.stats['analysisPausedSamples'] += frames
@@ -142,6 +158,9 @@ class LoopbackEngine(LiveEngine):
         self.paused.clear()
 
     def poll_error(self):
+        if self.audio_capture and self.audio_capture.error and not self.stop_requested.is_set():
+            self.error = self.audio_capture.error
+            self.request_stop()
         if self.started and self.stream and not self.stop_requested.is_set():
             try:
                 active = self.stream.is_active()
@@ -185,6 +204,12 @@ class LoopbackEngine(LiveEngine):
                 raise RuntimeError('Analysis worker did not stop; recording spool retained.')
         self.finalized = True
         if self.recorder:
+            captured_audio = None
+            if self.audio_capture:
+                try:
+                    captured_audio = self.audio_capture.finish(self.frozen_position)
+                except Exception as error:
+                    self.error = self.error or str(error)
             self.stats['meanProcessingMs'] = self.stats['totalProcessingMs']/max(1, self.stats['analysedBlocks'])
             metadata = dict(source='system_audio', mode='live', sourceType='windows.wasapi.loopback',
                 sampleRate=self.info.samplerate, durationSeconds=self.frozen_position/self.info.samplerate,
@@ -199,9 +224,34 @@ class LoopbackEngine(LiveEngine):
                     clock='received WASAPI PCM sample count; session-relative, not original song time',
                     pause='capture clock continues; analysis/recording pauses, external audio continues',
                     microphone=False, outputPlayback=False,
+                    temporaryAudioPath=str(captured_audio) if captured_audio else None,
+                    audioCleanup='removed after verified MP4; retained on video failure',
                     overflow='unknown lost hardware samples are reported, not fabricated'),
                 eventTypes=['onset', 'estimatedBeat', 'analysisGap', 'analysisDroppedBuffer',
                             'captureOverflow', 'captureStatus', 'analysisPaused', 'analysisResumed'],
-                diagnostics=dict(self.stats), error=self.error)
+                diagnostics=dict(self.stats, audioRecording=dict(self.audio_capture.stats) if self.audio_capture else {}), error=self.error)
             self.result_path = self.recorder.finish(metadata)
+            print(f'\nJSON saved and validated:\n{self.result_path}', flush=True)
+            if self.export_mp4:
+                try:
+                    if not captured_audio or not self.frozen_position:
+                        raise ValueError('No captured audio available for MP4 export.')
+                    from video_export import export_video
+                    self.export_status = f'JSON saved: {self.result_path}. Rendering ECG MP4...'
+                    print('Rendering ECG MP4 from recorded live events and Windows audio...', flush=True)
+                    def progress(percent, message):
+                        self.export_status = f'JSON saved. [{percent}%] {message}'
+                        print(f'[{percent:3d}% ] {message}', flush=True)
+                    self.video_path, report = export_video(captured_audio, self.result_path, self.folder,
+                        mode=self.video_mode, progress=progress, source_format='live')
+                    self.export_status = f'JSON and MP4 validated: {self.video_path}'
+                    print(f'[100% ] Capture JSON and ECG MP4 completed.\nVIDEO:\n{self.video_path}', flush=True)
+                    try:
+                        self.audio_capture.cleanup()
+                    except OSError as cleanup_error:
+                        print(f'Both outputs are valid; temporary audio could not be removed: {cleanup_error}', flush=True)
+                except Exception as error:
+                    self.error = self.error or f'JSON saved; MP4 export failed: {error}'
+                    self.export_status = str(self.error)
+                    print(self.error, flush=True)
         return self.result_path

@@ -8,6 +8,80 @@ Video defaults to a fast **1280 x 720, 24 FPS preview**. No GPU, decorative engi
 cloud service, recording import or manual alignment is needed. Only the explicit
 Microphone Analysis mode opens a microphone; system-audio capture remains separate.
 
+## Mode workflows
+
+### Mode 1: Offline Analysis
+
+Local WAV to validated feature JSON; no video is generated.
+
+![Mode 1: offline WAV analysis workflow](<Super Happy Space 2.0 Offline Workflow.webp>)
+
+### Mode 2: Windows system-audio live analysis
+
+Capture the selected Windows playback endpoint. Start/Stop controls recording;
+JSON is saved first, followed by an ECG MP4 with the captured audio.
+
+![Mode 2: Windows playback loopback workflow](<Super Happy Space 2.0 Audio Workflow.webp>)
+
+### Mode 3: Video Export
+
+Analyse a local WAV, save its features, then stream ECG frames to FFmpeg with
+the original audio. Both outputs go into `download/`.
+
+![Mode 3: WAV to features and ECG MP4 workflow](docs/workflows/mode-3-video-export.svg)
+
+### Mode 4: Microphone Analysis
+
+Record physical microphone input using the same Start/Stop interface. Input gain
+applies to both feature extraction and the audio included in the ECG MP4.
+
+![Mode 4: microphone recording workflow](<Microphone Analysis Workflow Infographic.webp>)
+
+The generated illustrations are workflow overviews. Where they mention LUFS,
+the implementation actually uses RMS-based **dBFS**, not perceptual LUFS.
+Output names shown are examples; existing files receive numbered alternatives.
+
+## Live extraction timing and latency
+
+Modes 2 and 4 share the streaming analyser. With a **48,000 Hz** device and the
+default 512-sample hop, 2,048-sample FFT and 30 FPS GUI:
+
+| Timing component | Windows loopback (mode 2) | Microphone (mode 4) |
+| --- | --- | --- |
+| Feature update interval | 10.67 ms | 10.67 ms |
+| Trailing analysis window | 42.67 ms of audio | 42.67 ms of audio |
+| Onset confirmation lookahead | One hop: 10.67 ms | One hop: 10.67 ms |
+| GUI redraw interval | Approximately 33.33 ms | Approximately 33.33 ms |
+| Mean DSP computation per block, measured | 1.36 ms | 1.19 ms |
+| Maximum DSP computation per block, measured | 21.33 ms | 19.68 ms |
+| Maximum analysis queue wait, measured | 7.36 ms | 4.34 ms |
+| Device-reported input latency in saved test | 22 ms | Not included in saved report |
+
+Measured values come from short, separate development-machine hardware tests:
+[loopback report](examples/loopback_validation.json) and
+[microphone report](examples/microphone_validation.json). Each test recorded one
+processing-budget overrun and zero dropped analysis/audio buffers. These are
+observations, not performance guarantees or sustained-load benchmarks.
+
+**The 10.67 ms update interval is not end-to-end latency.** Neither physical
+sound-to-screen latency nor Windows playback-to-screen latency has been measured.
+Windows/device buffering, queued work, computation and GUI scheduling contribute;
+the table's individual maxima must not be added as an end-to-end measurement.
+The trailing FFT window is reused between blocks, so it does not require a fresh
+42.67 ms wait on every update. Onset timestamps refer to the centre of the
+previous trailing window; backdated timestamps do not remove detection delay.
+
+The device's native sample rate determines the intervals: `hop / sampleRate`
+and `fftSize / sampleRate`. At 44,100 Hz these become approximately 11.61 ms and
+46.44 ms. The GUI interval is independent of the audio sample rate.
+
+Loudness and spectrum update as blocks arrive. BPM needs at least five consistent
+onset intervals and can take several seconds to settle; irregular music may keep
+it at **Estimating...**. Loopback captures digital playback without room noise or
+microphone processing; microphone input also depends on acoustics, gain and
+Windows/vendor enhancements. JSON finalisation and MP4 rendering after Stop are
+separate from live extraction latency.
+
 ## Microphone Analysis
 
 Choose **4** in CMD. The same live ECG/features window opens **stopped**. Click

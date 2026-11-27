@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="1050" viewBox="0 0 1100 1050" role="img" aria-labelledby="title desc">
+<title id="title">Super Happy Space 2.0 - Mode 3 Video Export</title><desc id="desc">Local WAV analysis saves JSON first, then renders and validates an ECG MP4 with original audio.</desc>
+<defs><marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#0866b4"/></marker></defs>
+<rect width="1100" height="1050" fill="#f7fbff"/>
+<g font-family="Segoe UI,Arial,sans-serif" text-anchor="middle">
+<rect x="50" y="25" width="1000" height="80" rx="25" fill="#07519e"/><text x="550" y="75" fill="white" font-size="30" font-weight="bold">Super Happy Space 2.0 - Video Export</text>
+<rect x="220" y="130" width="660" height="80" rx="15" fill="#dfedff" stroke="#0866b4" stroke-width="2"/><text x="550" y="162" font-size="24" font-weight="bold" fill="#083d70">1. Launch CMD app</text><text x="550" y="189" font-size="19" fill="#17364c">Select Mode 3: Video Export</text>
+<path d="M550,210 V230" stroke="#0866b4" stroke-width="3" marker-end="url(#arrow)"/>
+<rect x="220" y="235" width="660" height="80" rx="15" fill="#dfedff" stroke="#0866b4" stroke-width="2"/><text x="550" y="267" font-size="24" font-weight="bold" fill="#083d70">2. Enter local WAV path</text><text x="550" y="294" font-size="19" fill="#17364c">Validate readable WAV audio</text>
+<path d="M550,315 V335" stroke="#0866b4" stroke-width="3" marker-end="url(#arrow)"/>
+<rect x="220" y="340" width="660" height="80" rx="15" fill="#dfedff" stroke="#0866b4" stroke-width="2"/><text x="550" y="372" font-size="24" font-weight="bold" fill="#083d70">3. Analyse with librosa</text><text x="550" y="399" font-size="19" fill="#17364c">Beats, BPM, RMS and timbre</text>
+<path d="M550,420 V440" stroke="#0866b4" stroke-width="3" marker-end="url(#arrow)"/>
+<rect x="220" y="445" width="660" height="80" rx="15" fill="#cdf4ef" stroke="#0866b4" stroke-width="2"/><text x="550" y="477" font-size="24" font-weight="bold" fill="#083d70">4. Validate and save JSON</text><text x="550" y="504" font-size="19" fill="#17364c">[song_name]_features.json FIRST</text>
+<path d="M550,525 V545" stroke="#0866b4" stroke-width="3" marker-end="url(#arrow)"/>
+<rect x="220" y="550" width="660" height="80" rx="15" fill="#dfedff" stroke="#0866b4" stroke-width="2"/><text x="550" y="582" font-size="24" font-weight="bold" fill="#083d70">5. Render ECG animation</text><text x="550" y="609" font-size="19" fill="#17364c">Vertical bar and highlighted peaks</text>
+<path d="M550,630 V650" stroke="#0866b4" stroke-width="3" marker-end="url(#arrow)"/>
+<rect x="220" y="655" width="660" height="80" rx="15" fill="#dfedff" stroke="#0866b4" stroke-width="2"/><text x="550" y="687" font-size="24" font-weight="bold" fill="#083d70">6. Stream frames to FFmpeg</text><text x="550" y="714" font-size="19" fill="#17364c">Original WAV audio + ECG frames</text>
+<path d="M550,735 V755" stroke="#0866b4" stroke-width="3" marker-end="url(#arrow)"/>
+<rect x="220" y="760" width="660" height="80" rx="15" fill="#dfedff" stroke="#0866b4" stroke-width="2"/><text x="550" y="792" font-size="24" font-weight="bold" fill="#083d70">7. Encode and validate MP4</text><text x="550" y="819" font-size="19" fill="#17364c">H.264 video + AAC audio</text>
+<path d="M550,840 V860" stroke="#0866b4" stroke-width="3" marker-end="url(#arrow)"/>
+<rect x="220" y="865" width="660" height="80" rx="15" fill="#cdf4ef" stroke="#0866b4" stroke-width="2"/><text x="550" y="897" font-size="24" font-weight="bold" fill="#083d70">8. Save outputs to download/</text><text x="550" y="924" font-size="19" fill="#17364c">[song_name]_ecg.mp4; show success</text>
+<text x="550" y="995" font-size="19" fill="#17364c">Preview: 1280 x 720 / 24 FPS | Quality: 1920 x 1080 / 30 FPS</text><text x="550" y="1025" font-size="17" fill="#17364c">Existing outputs receive numbered names. Invalid input or export failure is reported.</text></g></svg>
